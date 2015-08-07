@@ -251,7 +251,7 @@ type SOAPEnvelope struct {
 }
 
 //get loads SOAP Envelope from the endpoint and stores it in the body parameter.
-func (api *OpenApi) get(endpoint string, params url.Values, body interface{}) error {
+func (api OpenApi) get(endpoint string, params url.Values, body interface{}) error {
 
 	var err error
 
@@ -273,7 +273,7 @@ func (api *OpenApi) get(endpoint string, params url.Values, body interface{}) er
 }
 
 //QueryStation returns stations with matching names
-func (api *OpenApi) QueryStation(inpPointFr string) (res GetStartEndPointResult, err error) {
+func (api OpenApi) QueryStation(inpPointFr string) (res GetStartEndPointResult, err error) {
 
 	params := url.Values{}
 	params.Set("inpPointFr", inpPointFr)
@@ -287,7 +287,7 @@ func (api *OpenApi) QueryStation(inpPointFr string) (res GetStartEndPointResult,
 }
 
 //QueryPage returns matching start/end stations
-func (api *OpenApi) QueryPage(inpPointFr, inpPointTo string) (res GetStartEndPointResult, err error) {
+func (api OpenApi) QueryPage(inpPointFr, inpPointTo string) (res GetStartEndPointResult, err error) {
 
 	params := url.Values{}
 	params.Set("inpPointFr", inpPointFr)
@@ -302,7 +302,7 @@ func (api *OpenApi) QueryPage(inpPointFr, inpPointTo string) (res GetStartEndPoi
 }
 
 //ResultsPage returns list of journeys between two points
-func (api *OpenApi) ResultsPage(cmdaction string, from, to Point, LastStart time.Time) (res GetJourneyResult, err error) {
+func (api OpenApi) ResultsPage(cmdaction string, from, to Point, LastStart time.Time) (res GetJourneyResult, err error) {
 
 	params := url.Values{}
 	params.Set("cmdaction", cmdaction)
@@ -319,7 +319,7 @@ func (api *OpenApi) ResultsPage(cmdaction string, from, to Point, LastStart time
 }
 
 //NearestStation returns stations nearby X,Y point, within radius R
-func (api *OpenApi) NearestStation(x, y float64, R int) (res GetNearestStopAreaResult, err error) {
+func (api OpenApi) NearestStation(x, y float64, R int) (res GetNearestStopAreaResult, err error) {
 
 	params := url.Values{}
 	params.Set("x", fmt.Sprintf("%.0f", x))
@@ -334,7 +334,7 @@ func (api *OpenApi) NearestStation(x, y float64, R int) (res GetNearestStopAreaR
 }
 
 //StationResult returns timetable for a given station
-func (api *OpenApi) StationResult(selPointFrKey int, t time.Time) (res GetDepartureArrivalResult, err error) {
+func (api OpenApi) StationResult(selPointFrKey int, t time.Time) (res GetDepartureArrivalResult, err error) {
 
 	params := url.Values{}
 	params.Set("selPointFrKey", fmt.Sprintf("%d", selPointFrKey))
@@ -349,7 +349,7 @@ func (api *OpenApi) StationResult(selPointFrKey int, t time.Time) (res GetDepart
 }
 
 //JourneyPath returns geo path for a given JourneyResultKey and sequence number
-func (api *OpenApi) JourneyPath(cf string, sequenceNo int) (res GetJourneyPathResult, err error) {
+func (api OpenApi) JourneyPath(cf string, sequenceNo int) (res GetJourneyPathResult, err error) {
 
 	params := url.Values{}
 	params.Set("cf", cf)
@@ -364,7 +364,7 @@ func (api *OpenApi) JourneyPath(cf string, sequenceNo int) (res GetJourneyPathRe
 }
 
 //Part returns the geo coordinates
-func (res *GetJourneyPathResult) Part() (part *Part, err error) {
+func (res GetJourneyPathResult) Part() (part *Part, err error) {
 
 	err = xml.Unmarshal(res.ResultXML, &part)
 	if err != nil {
