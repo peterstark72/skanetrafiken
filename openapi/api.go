@@ -37,8 +37,8 @@ const (
 
 const (
 	YYMMDD   = "060102"
-	HHMM     = "1505"
-	DATETIME = "2006-01-02 15:04"
+	HHMM     = "1504"
+	DATETIME = "2006-01-02T15:04:05"
 )
 
 type OpenApi struct {
