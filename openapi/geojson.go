@@ -30,7 +30,8 @@ type FeatureCollection struct {
 
 //LatLng convert X, Y RT90 values to WGS84 lat lon
 func (p Point) LatLng() [2]float64 {
-	return geo.GridToGeodetic(p.X, p.Y)
+	lat, lon := geo.GridToGeodetic(p.X, p.Y)
+	return [2]float64{lon, lat}
 }
 
 //AsFeature converts a Point into a GeoJSON Feature Point

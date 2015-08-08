@@ -93,6 +93,8 @@ func SearchHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	json.NewEncoder(w).Encode(result.AsFeatureCollection())
 
 }

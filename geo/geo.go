@@ -30,10 +30,10 @@ const (
 )
 
 //GridToGeodetic converts RT90 coordinates to WGS84
-func GridToGeodetic(x, y float64) [2]float64 {
+func GridToGeodetic(x, y float64) (float64, float64) {
 
 	if CentralMeridian == 31337.0 {
-		return [2]float64{0.0, 0.0}
+		return 0.0, 0.0
 	}
 
 	e2 := Flattening * (2.0 - Flattening)
@@ -60,7 +60,7 @@ func GridToGeodetic(x, y float64) [2]float64 {
 	lon_radian := LambdaZero + delta_lambda
 	lat_radian := phi_star + math.Sin(phi_star)*math.Cos(phi_star)*(Astar+Bstar*math.Pow(math.Sin(phi_star), 2)+Cstar*math.Pow(math.Sin(phi_star), 4)+Dstar*math.Pow(math.Sin(phi_star), 6))
 
-	return [2]float64{lat_radian * 180.0 / math.Pi, lon_radian * 180.0 / math.Pi}
+	return lat_radian * 180.0 / math.Pi, lon_radian * 180.0 / math.Pi
 }
 
 //GeodeticToGrid converts WGS84 coordinates to RT90
