@@ -27,16 +27,16 @@ func GetApiClient(req *http.Request) (api openapi.OpenApi) {
 	return api
 }
 
-//GetResourceIdFromPath return the ID from /some/path/{id}
-func GetResourceIdFromPath(path string) (int, error) {
+//WriteGeoJSONHeaders writes relevant HTTP Headers for GeoJSON
+func WriteGeoJSONHeaders(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-type", "application/vnd.geo+json")
+}
 
-	segments := strings.Split(path, "/")
-
-	id, err := strconv.ParseInt(segments[len(segments)-1], 0, 0)
-	if err != nil {
-		return 0, err
-	}
-	return int(id), nil
+//WriteJSONHeaders writes relevant HTTP Headers for GeoJSON
+func WriteJSONHeaders(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-type", "application/json")
 }
 
 //Returns departues for a given Station ID
@@ -60,23 +60,27 @@ func StationHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	//Get the station ID
-	stationId, err := GetResourceIdFromPath(req.URL.Path)
+	segments := strings.Split(req.URL.Path, "/")
+	resource := segments[len(segments)-1]
+	stationId, err := strconv.ParseInt(resource, 0, 0)
 	if err != nil {
 		http.Error(w, "Missing ID", 400)
 		return
 	}
 
 	api := GetApiClient(req)
-	lines, err := api.StationResult(stationId, datetime)
+	lines, err := api.StationResult(int(stationId), datetime)
 	if err != nil {
 		http.Error(w, "Could not load time table", 500)
 		return
 	}
 
+	WriteJSONHeaders(w)
 	json.NewEncoder(w).Encode(lines.Lines)
 }
 
-func SearchHandler(w http.ResponseWriter, req *http.Request) {
+//SearchHandler searches for a station
+func SearchStationHandler(w http.ResponseWriter, req *http.Request) {
 
 	q := req.URL.Query().Get("q")
 
@@ -93,13 +97,12 @@ func SearchHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	json.NewEncoder(w).Encode(result.AsFeatureCollection())
+	WriteGeoJSONHeaders(w)
+	result.WriteGeoJSON(w)
 
 }
 
-func SearchPointsHandler(w http.ResponseWriter, req *http.Request) {
+func SearchStartEndPointsHandler(w http.ResponseWriter, req *http.Request) {
 
 	f := req.URL.Query().Get("from")
 	t := req.URL.Query().Get("to")
@@ -117,18 +120,11 @@ func SearchPointsHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(result.AsFeatureCollection())
+	WriteGeoJSONHeaders(w)
+	result.WriteGeoJSON(w)
 }
 
 func NearestStationsHandler(w http.ResponseWriter, req *http.Request) {
-
-	type Stop struct {
-		Name     string
-		Id       int
-		Distance int
-		Lat      float64
-		Lon      float64
-	}
 
 	var lat, lon float64
 	var err error
@@ -156,20 +152,102 @@ func NearestStationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	x, y := geo.GeodeticToGrid(lat, lon)
 
-	result, err := api.NearestStation(x, y, 1000)
+	result, err := api.NearestStation(x, y, 500)
 	if err != nil {
 		http.Error(w, "Could not find stations nearby", 500)
 		return
 	}
 
-	json.NewEncoder(w).Encode(result.AsFeatureCollection())
+	WriteGeoJSONHeaders(w)
+	result.WriteGeoJSON(w)
+}
 
+/*
+
+	/<name>,<id>,<type>/<name>,<id>,<type>
+
+	Example:
+
+	/Lund C,81216,0/Malmö C,80000,0
+
+	LUNDASTIGEN 3 KÅGERÖD|280721|1
+
+*/
+func JourneysHandler(w http.ResponseWriter, req *http.Request) {
+
+	loc, _ := time.LoadLocation(LOCALE)
+
+	segments := strings.Split(req.URL.Path, "/")
+	if len(segments) < 2 {
+		http.Error(w, "Unknown path", 400)
+		return
+	}
+
+	var points []openapi.Point
+	for _, seg := range segments[len(segments)-2:] {
+		p, err := openapi.NewPointFromURIParameter(seg)
+		points = append(points, *p)
+		if err != nil {
+			http.Error(w, "Illegal Point", 500)
+			return
+		}
+	}
+
+	//t := openapi.Point{"Malmö C", 80000, "STOP_AREA", openapi.Coord{6167946, 1323245}}
+
+	//t := openapi.Point{Name: "Lund C", Id: 81216, Type: "STOP_AREA"}
+	//f := openapi.Point{Name: "Hjärnarp Kyrkan", Id: 92156, Type: "STOP_AREA"}
+	//f := openapi.Point{Name: "Tygelsjö Laavägen", Id: 80421, Type: "STOP_AREA"}
+	//t := openapi.Point{Name: "Höörs Station", Id: 67048, Type: "STOP_AREA"}
+
+	api := GetApiClient(req)
+
+	result, err := api.ResultsPage("next", points[0], points[1], time.Now().In(loc))
+	if err != nil {
+		http.Error(w, "Could not find journey", 500)
+		return
+	}
+
+	WriteJSONHeaders(w)
+	json.NewEncoder(w).Encode(result)
+}
+
+func JourneyPathsHandler(w http.ResponseWriter, req *http.Request) {
+
+	segments := strings.Split(req.URL.Path, "/")
+	if len(segments) < 2 {
+		http.Error(w, "Missing Journey Key", 400)
+		return
+	}
+
+	key := segments[len(segments)-2]
+	seq, err := strconv.ParseInt(segments[len(segments)-1], 0, 0)
+	if err != nil {
+		http.Error(w, "Sequence must be an integer", 400)
+		return
+	}
+
+	api := GetApiClient(req)
+
+	result, err := api.JourneyPath(key, int(seq))
+	if err != nil {
+		http.Error(w, "Could not find journey path", 500)
+		return
+	}
+
+	WriteGeoJSONHeaders(w)
+	result.WriteGeoJSON(w)
 }
 
 func init() {
-	http.HandleFunc("/points", SearchPointsHandler)
-	http.HandleFunc("/stations", SearchHandler)
+	http.HandleFunc("/journeypaths/", JourneyPathsHandler)
+	http.HandleFunc("/journeys/", JourneysHandler)
+
+	http.HandleFunc("/search", SearchStartEndPointsHandler)
+
+	http.HandleFunc("/stations", SearchStationHandler)
 	http.HandleFunc("/stations/", StationHandler)
+
 	http.HandleFunc("/nearby/", NearestStationsHandler)
-	http.HandleFunc("/", SearchHandler)
+
 }

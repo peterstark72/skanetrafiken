@@ -1,6 +1,9 @@
 /*
-Package skanetrafiken wraps the Open API documented here:
+Golang wrapper of Skanetrafiken Open API, as documented here:
+
 http://labs.skanetrafiken.se/api.asp
+
+Method names keep the names from the API as much as possible, so for example "/querypage.asp" is QueryPage() etc.
 
 
 Example usage:
@@ -17,10 +20,13 @@ package openapi
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,18 +42,19 @@ const (
 )
 
 const (
-	YYMMDD   = "060102"
-	HHMM     = "1504"
-	DATETIME = "2006-01-02T15:04:05"
+	YYMMDD       = "060102"
+	HHMM         = "1504"
+	DATETIME     = "2006-01-02T15:04:05"
+	DATETIME_URL = "2006-01-02 15:04"
 )
 
 type OpenApi struct {
-	Client *http.Client
+	client *http.Client
 }
 
 //NewOpenAPI creates a new instance of the OpenAPI
 func NewOpenAPI() OpenApi {
-	api := OpenApi{Client: new(http.Client)}
+	api := OpenApi{new(http.Client)}
 	return api
 }
 
@@ -58,16 +65,7 @@ This is useful for the Google Appengine where we cannot use
 the built in http.Client. Instead we use appengine's.
 */
 func (api *OpenApi) SetHTTPClient(c *http.Client) {
-	api.Client = c
-}
-
-/*
-ParseDateTime parses the DateTime formatted strings
-from the API and returns a proper Time object.
-*/
-func ParseDateTime(dt string) (time.Time, error) {
-	loc, _ := time.LoadLocation("Europe/Copenhagen")
-	return time.ParseInLocation(DATETIME, dt, loc)
+	api.client = c
 }
 
 type PointOnRouteLink struct {
@@ -82,9 +80,9 @@ type RealTimeInfo struct {
 	NewDepPoint        string
 	NewArrPoint        string
 	DepTimeDeviation   int
-	DepDeviationAffect RealTimeAffect
+	DepDeviationAffect string
 	ArrTimeDeviation   int
-	ArrDeviationAffect RealTimeAffect
+	ArrDeviationAffect string
 	Canceled           bool
 }
 
@@ -133,11 +131,24 @@ func (p Point) AsURIParameter() string {
 		"ADDRESS":   ADDRESS,
 		"UNKNOWN":   UNKNOWN,
 	}
-
 	return fmt.Sprintf("%s|%d|%d", p.Name, p.Id, PointTypes[p.Type])
 }
 
-type RealTimeAffect string
+/*
+NewPointFromURIParameter creates a new Point from the URI parameter format
+
+<name>|<id>|<type>
+
+Where <type> is one of "STOP_AREA", "POI", etc.
+*/
+func NewPointFromURIParameter(s string) (*Point, error) {
+	parts := strings.Split(s, "|")
+	if len(parts) != 3 {
+		return nil, errors.New("Incorrect Point parameters")
+	}
+	id, _ := strconv.ParseInt(parts[1], 0, 0)
+	return &Point{parts[0], int(id), parts[2], Coord{}}, nil
+}
 
 type RouteLink struct {
 	RouteLinkKey string
@@ -174,12 +185,31 @@ type GetStartEndPointResult struct {
 	Status
 }
 
+type PartLine struct {
+	Name     string
+	No       int
+	LinTName string
+	Distance int //This is not in the Open API
+}
+
+type PartPoint struct {
+	Id       int
+	Poi      string
+	PoiAlias string
+	Name     string
+	Coord
+}
+
 type Part struct {
-	XMLName xml.Name `xml:"Part"`
-	From    Point
-	To      Point
-	Line    Line
-	Coords  []Coord `xml:"Coords>Coord"`
+	Line   PartLine  `xml:"Line"`
+	To     PartPoint `xml:"To"`
+	From   PartPoint `xml:"From"`
+	Coords []Coord   `xml:"Coords>Coord"`
+}
+
+type ResultXML struct {
+	XMLName xml.Name `xml:"Parts"`
+	Parts   []Part   `xml:"Part"`
 }
 
 type GetStartEndPointResponse struct {
@@ -223,8 +253,7 @@ type GetNearestStopAreaResponse struct {
 
 type StopAreaData struct {
 	Name string
-	X    float64
-	Y    float64
+	Coord
 }
 
 type GetDepartureArrivalResult struct {
@@ -257,13 +286,13 @@ func (api OpenApi) get(endpoint string, params url.Values, body interface{}) err
 
 	url := BaseURL + endpoint + "?" + params.Encode()
 
-	res, err := api.Client.Get(url)
+	res, err := api.client.Get(url)
 	if err != nil {
 		return err
 	}
 
 	data, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
+	defer res.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -286,7 +315,7 @@ func (api OpenApi) QueryStation(inpPointFr string) (res GetStartEndPointResult, 
 	return soap.Body.GetStartEndPointResponse.GetStartEndPointResult, nil
 }
 
-//QueryPage returns matching start/end stations
+//QueryPage returns matching start/end points
 func (api OpenApi) QueryPage(inpPointFr, inpPointTo string) (res GetStartEndPointResult, err error) {
 
 	params := url.Values{}
@@ -308,7 +337,7 @@ func (api OpenApi) ResultsPage(cmdaction string, from, to Point, LastStart time.
 	params.Set("cmdaction", cmdaction)
 	params.Set("selPointFr", from.AsURIParameter())
 	params.Set("selPointTo", to.AsURIParameter())
-	params.Set("LastStart", LastStart.Format(DATETIME))
+	params.Set("LastStart", LastStart.Format("2006-01-02 15:04"))
 	params.Set("DetailedResult", "True")
 
 	soap := SOAPEnvelope{}
@@ -338,8 +367,8 @@ func (api OpenApi) StationResult(selPointFrKey int, t time.Time) (res GetDepartu
 
 	params := url.Values{}
 	params.Set("selPointFrKey", fmt.Sprintf("%d", selPointFrKey))
-	params.Set("inpDate", t.Format(YYMMDD))
-	params.Set("inpTime", t.Format(HHMM))
+	params.Set("inpDate", t.Format("060102"))
+	params.Set("inpTime", t.Format("1504"))
 
 	soap := SOAPEnvelope{}
 	if err = api.get(STATIONRESULT, params, &soap); err != nil {
@@ -363,13 +392,19 @@ func (api OpenApi) JourneyPath(cf string, sequenceNo int) (res GetJourneyPathRes
 	return soap.Body.GetJourneyPathResponse.GetJourneyPathResult, nil
 }
 
-//Part returns the geo coordinates
-func (res GetJourneyPathResult) Part() (part *Part, err error) {
+//Parts unmarshals the raw XML included in GetJourneyPathResult
+func (res GetJourneyPathResult) Parts() (parts []Part, err error) {
 
-	err = xml.Unmarshal(res.ResultXML, &part)
+	//We need to wrap the raw XML with <Parts> to make it well formed [sigh]
+	data := []byte("<Parts>")
+	data = append(data, []byte(res.ResultXML)...)
+	data = append(data, []byte("</Parts>")...)
+
+	r := ResultXML{}
+	err = xml.Unmarshal(data, &r)
 	if err != nil {
-		return part, err
+		return nil, err
 	}
 
-	return part, nil
+	return r.Parts, nil
 }

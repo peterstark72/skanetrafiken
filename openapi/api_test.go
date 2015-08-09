@@ -64,7 +64,7 @@ func TestJourneyPath(t *testing.T) {
 		return
 	}
 
-	_, err = path.Part()
+	_, err = path.Parts()
 	if err != nil {
 		t.Error(err)
 		return
