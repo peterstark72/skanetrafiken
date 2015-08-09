@@ -42,7 +42,9 @@ func SearchStation() {
 		return
 	}
 
-	PrintPoints(result.StartPoints)
+	LetsPrint(Printables(result.StartPoints))
+
+	//PrintPoints(result.StartPoints)
 }
 
 func SearchStartEndPoints() {
@@ -109,8 +111,6 @@ func FindJourneys() {
 		path, _ := api.JourneyPath(result.JourneyResultKey, 0)
 	*/
 }
-
-type AsCSV []Car
 
 func main() {
 

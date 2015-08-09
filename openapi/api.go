@@ -41,13 +41,6 @@ const (
 	STATIONRESULT  = "stationresults.asp"
 )
 
-const (
-	YYMMDD       = "060102"
-	HHMM         = "1504"
-	DATETIME     = "2006-01-02T15:04:05"
-	DATETIME_URL = "2006-01-02 15:04"
-)
-
 type OpenApi struct {
 	client *http.Client
 }
