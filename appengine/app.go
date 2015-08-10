@@ -3,8 +3,6 @@ package main
 import (
 	"appengine"
 	"appengine/urlfetch"
-	"encoding/json"
-	"github.com/peterstark72/golang-skanetrafiken/geo"
 	"github.com/peterstark72/golang-skanetrafiken/openapi"
 	"net/http"
 	"strconv"
@@ -69,14 +67,14 @@ func StationHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	api := GetApiClient(req)
-	lines, err := api.StationResult(int(stationId), datetime)
+	result, err := api.StationResult(int(stationId), datetime)
 	if err != nil {
 		http.Error(w, "Could not load time table", 500)
 		return
 	}
 
 	WriteJSONHeaders(w)
-	json.NewEncoder(w).Encode(lines.Lines)
+	result.WriteJSON(w)
 }
 
 //SearchHandler searches for a station
@@ -98,7 +96,7 @@ func SearchStationHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	WriteGeoJSONHeaders(w)
-	result.WriteGeoJSON(w)
+	result.WriteJSON(w)
 
 }
 
@@ -121,7 +119,7 @@ func SearchStartEndPointsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	WriteGeoJSONHeaders(w)
-	result.WriteGeoJSON(w)
+	result.WriteJSON(w)
 }
 
 func NearestStationsHandler(w http.ResponseWriter, req *http.Request) {
@@ -150,7 +148,7 @@ func NearestStationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	api := GetApiClient(req)
 
-	x, y := geo.GeodeticToGrid(lat, lon)
+	x, y := openapi.GeodeticToGrid(lat, lon)
 
 	result, err := api.NearestStation(x, y, 500)
 	if err != nil {
@@ -159,7 +157,7 @@ func NearestStationsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	WriteGeoJSONHeaders(w)
-	result.WriteGeoJSON(w)
+	result.WriteJSON(w)
 }
 
 /*
@@ -193,13 +191,6 @@ func JourneysHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	//t := openapi.Point{"Malmö C", 80000, "STOP_AREA", openapi.Coord{6167946, 1323245}}
-
-	//t := openapi.Point{Name: "Lund C", Id: 81216, Type: "STOP_AREA"}
-	//f := openapi.Point{Name: "Hjärnarp Kyrkan", Id: 92156, Type: "STOP_AREA"}
-	//f := openapi.Point{Name: "Tygelsjö Laavägen", Id: 80421, Type: "STOP_AREA"}
-	//t := openapi.Point{Name: "Höörs Station", Id: 67048, Type: "STOP_AREA"}
-
 	api := GetApiClient(req)
 
 	result, err := api.ResultsPage("next", points[0], points[1], time.Now().In(loc))
@@ -209,7 +200,7 @@ func JourneysHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	WriteJSONHeaders(w)
-	json.NewEncoder(w).Encode(result)
+	result.WriteJSON(w)
 }
 
 func JourneyPathsHandler(w http.ResponseWriter, req *http.Request) {
@@ -236,7 +227,7 @@ func JourneyPathsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	WriteGeoJSONHeaders(w)
-	result.WriteGeoJSON(w)
+	result.WriteJSON(w)
 }
 
 func init() {

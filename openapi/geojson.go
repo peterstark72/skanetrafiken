@@ -142,7 +142,7 @@ func (res GetJourneyPathResult) WriteJSON(w io.Writer) error {
 
 //WriteJSON writes GetDepartureArrivalResult as a JSON object
 func (res GetDepartureArrivalResult) WriteJSON(w io.Writer) error {
-	return json.NewEncoder(w).Encode(res)
+	return json.NewEncoder(w).Encode(res.Lines)
 }
 
 //WriteJSON writes GetJourneyResult as a JSON object

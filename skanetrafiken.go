@@ -42,9 +42,7 @@ func SearchStation() {
 		return
 	}
 
-	LetsPrint(Printables(result.StartPoints))
-
-	//PrintPoints(result.StartPoints)
+	PrintPoints(result.StartPoints)
 }
 
 func SearchStartEndPoints() {
