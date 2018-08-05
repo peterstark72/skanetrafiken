@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/peterstark72/golang-skanetrafiken/openapi"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/peterstark72/skanetrafiken/openapi"
 	//"time"
 )
 
