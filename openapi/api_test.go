@@ -1,11 +1,13 @@
-package openapi
+package openapi_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/peterstark72/skanetrafiken/openapi"
 )
 
-var api = NewOpenAPI()
+var api = openapi.NewOpenAPI()
 
 func TestQueryPage(t *testing.T) {
 
@@ -19,8 +21,8 @@ func TestQueryPage(t *testing.T) {
 func TestResultsPage(t *testing.T) {
 
 	_, err := api.ResultsPage("next",
-		Point{"Malmö C", 80000, "STOP_AREA", Coord{0, 0}},
-		Point{"Landskrona", 82000, "STOP_AREA", Coord{0, 0}},
+		openapi.Point{"Malmö C", 80000, "STOP_AREA", openapi.Coord{0, 0}},
+		openapi.Point{"Landskrona", 82000, "STOP_AREA", openapi.Coord{0, 0}},
 		time.Now())
 	if err != nil {
 		t.Error(err)
@@ -52,11 +54,19 @@ func TestStationResult(t *testing.T) {
 	}
 }
 
+func TestStationResult2(t *testing.T) {
+
+	_, err := openapi.GetStationResult(80000, time.Now())
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestJourneyPath(t *testing.T) {
 
 	var err error
 
-	respage, err := api.ResultsPage("next", Point{"Malmö C", 80000, "STOP_AREA", Coord{0, 0}}, Point{"Landskrona", 82000, "STOP_AREA", Coord{0, 0}}, time.Now())
+	respage, err := api.ResultsPage("next", openapi.Point{"Malmö C", 80000, "STOP_AREA", openapi.Coord{0, 0}}, openapi.Point{"Landskrona", 82000, "STOP_AREA", openapi.Coord{0, 0}}, time.Now())
 
 	path, err := api.JourneyPath(respage.JourneyResultKey, 0)
 	if err != nil {

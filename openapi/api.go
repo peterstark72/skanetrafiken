@@ -45,6 +45,15 @@ type OpenApi struct {
 	client *http.Client
 }
 
+var DefaultClient = &OpenApi{}
+
+func (api OpenApi) transport() *http.Client {
+	if api.client != nil {
+		return api.client
+	}
+	return new(http.Client)
+}
+
 //NewOpenAPI creates a new instance of the OpenAPI
 func NewOpenAPI() OpenApi {
 	api := OpenApi{new(http.Client)}
@@ -279,7 +288,7 @@ func (api OpenApi) get(endpoint string, params url.Values, body interface{}) err
 
 	url := BaseURL + endpoint + "?" + params.Encode()
 
-	res, err := api.client.Get(url)
+	res, err := api.transport().Get(url)
 	if err != nil {
 		return err
 	}
@@ -368,6 +377,11 @@ func (api OpenApi) StationResult(selPointFrKey int, t time.Time) (res GetDepartu
 		return res, err
 	}
 	return soap.Body.GetDepartureArrivalResponse.GetDepartureArrivalResult, nil
+}
+
+//GetStationResult returns timetable for a given station
+func GetStationResult(stationID int, t time.Time) (res GetDepartureArrivalResult, err error) {
+	return DefaultClient.StationResult(stationID, t)
 }
 
 //JourneyPath returns geo path for a given JourneyResultKey and sequence number

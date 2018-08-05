@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/peterstark72/skanetrafiken/openapi"
 	//"time"
@@ -111,6 +112,15 @@ func FindJourneys() {
 	*/
 }
 
+func GetStationResult() {
+
+	res, _ := openapi.GetStationResult(80421, time.Now())
+
+	for _, r := range res.Lines {
+		fmt.Println(r)
+	}
+}
+
 func main() {
 
 	if len(os.Args) < 2 {
@@ -121,6 +131,8 @@ func main() {
 	cmd := os.Args[1]
 
 	switch cmd {
+	case "station":
+		GetStationResult()
 	case "search":
 		SearchStation()
 	case "points":
